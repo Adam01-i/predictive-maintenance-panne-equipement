@@ -1,0 +1,30 @@
+# Environnements virtuels
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Jupyter
+*.ipynb_checkpoints
+
+# Artefacts générés par le pipeline (reproductibles via `python -m src.pipeline`)
+# Décommenter si vous ne voulez pas versionner les données/figures générées :
+# data/processed/
+# outputs/figures/
+# outputs/metrics/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Éditeurs
+.vscode/
+.idea/
