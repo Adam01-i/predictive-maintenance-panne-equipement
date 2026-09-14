@@ -1,85 +1,110 @@
-# Maintenance prédictive
+# Maintenance prédictive des équipements
 
-## Prédire une panne d'équipement dans les 30 jours
+> **Prédire le risque de panne dans les 30 prochains jours à partir de données de capteurs industriels.**
 
-Projet de data science de bout en bout : partir de mesures de capteurs
-industriels imparfaites, construire un jeu de données exploitable, puis
-entraîner un modèle de classification capable d'estimer le risque de panne.
+Projet de data science de bout en bout, réalisé en Python et scikit-learn. Il transforme des mesures imparfaites en un pipeline reproductible de préparation des données, d'apprentissage supervisé et d'évaluation métier.
 
-Le dépôt met l'accent sur la **qualité des données**, la **reproductibilité**
-et une évaluation adaptée à une cible déséquilibrée. Il s'agit d'un projet
-pédagogique et portfolio, pas d'un système de décision industrielle.
+![Répartition des pannes dans le jeu de données](outputs/figures/target_distribution.png)
+
+## Sommaire
+
+- [Objectifs](#objectifs)
+- [Résultats](#résultats)
+- [Visualisations](#visualisations)
+- [Pipeline](#pipeline)
+- [Données](#données)
+- [Installation et utilisation](#installation-et-utilisation)
+- [Structure du projet](#structure-du-projet)
+- [Choix techniques](#choix-techniques)
+- [Limites et prochaines étapes](#limites-et-prochaines-étapes)
+
+## Objectifs
+
+Le projet répond à une question opérationnelle : **quels équipements présentent un risque élevé de panne à court terme ?**
+
+Il met l'accent sur :
+
+- la fiabilité des données avant la modélisation ;
+- la prévention de la fuite de données ;
+- la prise en compte du déséquilibre entre pannes et non-pannes ;
+- la reproductibilité des résultats et des artefacts générés.
+
+Le dépôt constitue un projet pédagogique et de portfolio. Il ne remplace pas une validation sur des données industrielles réelles.
 
 ## Résultats
 
-Le pipeline sélectionne le modèle sur une validation croisée stratifiée à
-5 folds, puis mesure sa performance sur un jeu de test séparé (180 lignes).
-Les résultats ci-dessous correspondent aux artefacts actuellement générés
-dans [`outputs/metrics/metrics.json`](outputs/metrics/metrics.json).
+Le modèle est sélectionné par validation croisée stratifiée à 5 folds, puis évalué sur un jeu de test indépendant de 180 observations. Les résultats sont disponibles dans [`outputs/metrics/metrics.json`](outputs/metrics/metrics.json).
 
 | Indicateur | Résultat |
-|---|---:|
+| --- | ---: |
 | Modèle retenu | Régression logistique pondérée |
-| ROC-AUC moyen en validation croisée | 0,762 ± 0,037 |
-| ROC-AUC sur le test | **0,775** |
-| Accuracy sur le test | 0,728 |
-| Précision classe `panne` | 0,377 |
-| Rappel classe `panne` | **0,676** |
-| F1-score classe `panne` | 0,484 |
+| ROC-AUC moyenne en validation croisée | **0,762 ± 0,037** |
+| ROC-AUC sur le jeu de test | **0,775** |
+| Accuracy sur le jeu de test | 0,728 |
+| Précision de la classe `panne` | 0,377 |
+| Rappel de la classe `panne` | **0,676** |
+| F1-score de la classe `panne` | 0,484 |
 
-Le rappel de 0,676 signifie que le modèle détecte environ deux pannes sur
-trois dans cet échantillon de test. En contrepartie, la précision reste
-limitée : plusieurs alertes sont des faux positifs. C'est un compromis
-attendu pour un problème où manquer une panne peut être plus coûteux que
-déclencher une inspection supplémentaire.
+Le rappel de **0,676** indique que le modèle détecte environ deux pannes sur trois dans l'échantillon de test. La précision plus faible implique des faux positifs : ce compromis peut être pertinent lorsqu'une inspection préventive coûte moins cher qu'une panne non anticipée.
 
-Visualisations produites :
+## Visualisations
 
-- [Courbe ROC](outputs/figures/roc_curve.png)
-- [Matrice de confusion](outputs/figures/confusion_matrix.png)
-- [Importance des variables](outputs/figures/feature_importance.png)
-- [Répartition de la cible](outputs/figures/target_distribution.png)
+### Performance de classification
 
-## Pipeline de traitement
+| Courbe ROC | Matrice de confusion |
+| --- | --- |
+| ![Courbe ROC](outputs/figures/roc_curve.png) | ![Matrice de confusion](outputs/figures/confusion_matrix.png) |
+
+### Compréhension des données et du modèle
+
+| Importance des variables | Répartition de la cible |
+| --- | --- |
+| ![Importance des variables](outputs/figures/feature_importance.png) | ![Répartition de la cible](outputs/figures/target_distribution.png) |
+
+## Pipeline
 
 ```text
-CSV brut
-  -> normalisation des colonnes et des formats
-  -> conversion des décimales françaises
-  -> imputation des valeurs manquantes
-  -> détection des outliers via la règle IQR
-  -> split train/test stratifié
-  -> standardisation + encodage one-hot dans un Pipeline sklearn
-  -> comparaison régression logistique / random forest
-  -> évaluation et génération des artefacts
+Données CSV brutes
+        |
+        v
+Normalisation des colonnes et conversion des décimales françaises
+        |
+        v
+Imputation des valeurs manquantes + détection IQR des outliers
+        |
+        v
+Split train/test stratifié
+        |
+        v
+Standardisation + encodage one-hot dans un Pipeline scikit-learn
+        |
+        v
+Comparaison régression logistique / random forest
+        |
+        v
+Evaluation, métriques JSON et figures PNG
 ```
 
-Les valeurs aberrantes ne sont pas supprimées automatiquement : elles sont
-conservées et signalées dans la colonne `outlier_flag`, car une mesure
-extrême peut justement indiquer une dégradation de l'équipement.
+Les valeurs aberrantes sont conservées et signalées dans `outlier_flag` : une mesure extrême peut être un signal de dégradation utile à la maintenance.
 
-## Jeu de données
+## Données
 
-Le fichier [`data/raw/mini_etudiant_13_panne_equipement.csv`](data/raw/mini_etudiant_13_panne_equipement.csv)
-contient 900 observations de capteurs simulés, réparties sur trois sites et
-trois types d'équipements : pompe, convoyeur et compresseur.
+Le fichier [`data/raw/mini_etudiant_13_panne_equipement.csv`](data/raw/mini_etudiant_13_panne_equipement.csv) contient **900 observations** simulées, réparties sur trois sites et trois types d'équipements : pompe, convoyeur et compresseur.
 
-Variables utilisées :
+| Famille | Variables |
+| --- | --- |
+| Capteurs | température, vibration, humidité, pression, consommation |
+| Usage et historique | heures d'utilisation, alertes récentes, maintenance, interventions, indice d'usure |
+| Catégories | `site`, `equipement_type` |
+| Cible | `panne_30j`, indicateur binaire d'une panne dans les 30 jours |
 
-- Capteurs : température, vibration, humidité, pression et consommation.
-- Contexte d'utilisation : heures d'utilisation, alertes récentes,
-  maintenance, interventions et indice d'usure.
-- Catégories : `site` et `equipement_type`.
-- Cible : `panne_30j`, indicateur binaire d'une panne dans les 30 jours.
+Le jeu nettoyé est généré dans [`data/processed/panne_equipement_clean.csv`](data/processed/panne_equipement_clean.csv). Il contient 900 lignes et 14 colonnes, dont `outlier_flag`.
 
-Le fichier nettoyé est écrit dans
-[`data/processed/panne_equipement_clean.csv`](data/processed/panne_equipement_clean.csv).
-Il contient 900 lignes et 14 colonnes, dont `outlier_flag`.
+## Installation et utilisation
 
-## Installation
+### Installation
 
-Prérequis : Python 3.11 ou version compatible avec les dépendances du
-projet.
+Prérequis : Python 3.11 ou une version compatible avec les dépendances du projet.
 
 ```bash
 git clone https://github.com/Adam01-i/predictive-maintenance-panne-equipement.git
@@ -91,45 +116,36 @@ python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 ```
 
-Sous Windows, l'activation de l'environnement virtuel est :
+Sous Windows :
 
 ```powershell
 .venv\Scripts\Activate.ps1
 ```
 
-## Utilisation
+### Exécuter le pipeline
 
-Lancer le pipeline complet depuis la racine du projet :
+Depuis la racine du dépôt :
 
 ```bash
 python -m src.pipeline
 ```
 
-Cette commande effectue successivement le nettoyage, l'entraînement,
-l'évaluation et la génération des figures et métriques.
+La commande réalise le nettoyage, l'entraînement, l'évaluation et la génération des fichiers dans `outputs/`.
 
-Pour explorer le projet étape par étape, ouvrir les notebooks dans cet ordre :
+Pour suivre l'analyse pas à pas, ouvrir les notebooks dans cet ordre :
 
 1. [`notebooks/01_exploration_nettoyage.ipynb`](notebooks/01_exploration_nettoyage.ipynb)
 2. [`notebooks/02_modelisation.ipynb`](notebooks/02_modelisation.ipynb)
 
-## Tests
-
-Les tests vérifient notamment la conversion des décimales françaises, la
-gestion des valeurs manquantes, la suppression des doublons, le type de la
-cible et la création du signal d'outlier.
+### Lancer les tests
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-Une exécution sans pytest est également possible :
+Les tests couvrent notamment les décimales françaises, les valeurs manquantes, les doublons, le type de la cible et le signal d'outlier.
 
-```bash
-python tests/test_data_cleaning.py
-```
-
-## Structure
+## Structure du projet
 
 ```text
 .
@@ -138,12 +154,12 @@ python tests/test_data_cleaning.py
 │   └── processed/           # données nettoyées générées
 ├── notebooks/               # exploration et modélisation guidées
 ├── outputs/
-│   ├── figures/             # visualisations générées
-│   └── metrics/             # résultats JSON
+│   ├── figures/             # visualisations PNG
+│   └── metrics/             # métriques au format JSON
 ├── src/
-│   ├── data_cleaning.py     # chargement, nettoyage et rapport qualité
+│   ├── data_cleaning.py     # chargement et qualité des données
 │   ├── modeling.py          # entraînement, évaluation et figures
-│   └── pipeline.py          # point d'entrée bout en bout
+│   └── pipeline.py          # orchestration de bout en bout
 ├── tests/                   # tests de non-régression
 ├── requirements.txt
 └── LICENSE
@@ -151,35 +167,26 @@ python tests/test_data_cleaning.py
 
 ## Choix techniques
 
-- Conversion de la virgule décimale avant toute coercition numérique, afin
-  de ne pas transformer une mesure valide en valeur manquante.
-- Imputation des colonnes numériques par la médiane et des colonnes
-  catégorielles par le mode, après nettoyage des formats.
-- Suppression des lignes dont la cible est invalide, sans imputation de la
-  variable à prédire.
-- Préprocesseur ajusté uniquement sur le train pour éviter la fuite de
-  données : `StandardScaler` pour les variables numériques et
-  `OneHotEncoder` pour les catégories.
-- `class_weight="balanced"` pour tenir compte du déséquilibre entre pannes
-  et non-pannes.
-- Comparaison d'une régression logistique et d'une random forest selon la
-  ROC-AUC, puis évaluation finale sur un test jamais utilisé pour la
-  sélection.
-- `random_state=42` fixé pour rendre l'expérience reproductible.
+- Conversion de la virgule décimale avant toute coercition numérique.
+- Imputation par médiane pour les variables numériques et par mode pour les catégories.
+- Suppression des lignes dont la cible est invalide, sans imputation de `panne_30j`.
+- Préprocesseur ajusté uniquement sur le jeu d'entraînement pour éviter la fuite de données.
+- `StandardScaler` pour les variables numériques et `OneHotEncoder` pour les catégories.
+- `class_weight="balanced"` pour tenir compte du déséquilibre des classes.
+- Comparaison de la régression logistique et de la random forest selon la ROC-AUC.
+- `random_state=42` pour rendre l'expérience reproductible.
 
-## Limites et pistes d'amélioration
+## Limites et prochaines étapes
 
-Le jeu de données est synthétique, de petite taille et représente un instantané
-plutôt qu'une vraie série temporelle par équipement. Les métriques ne doivent
-donc pas être interprétées comme une garantie de performance en production.
+Le jeu de données est synthétique, de taille limitée et représente un instantané plutôt qu'une série temporelle par équipement. Les métriques ne constituent donc pas une garantie de performance en production.
 
-Pour aller plus loin :
+Pistes d'amélioration :
 
 - collecter des historiques horodatés par équipement ;
-- ajuster le seuil de décision selon le coût métier des faux négatifs ;
-- réaliser une recherche d'hyperparamètres et une validation temporelle ;
-- ajouter un suivi de dérive des données et une comparaison avec une règle
-  métier simple.
+- calibrer le seuil de décision selon le coût des faux négatifs et faux positifs ;
+- ajouter une recherche d'hyperparamètres et une validation temporelle ;
+- suivre la dérive des données et comparer le modèle à une règle métier simple ;
+- valider le modèle sur des données terrain avant tout usage opérationnel.
 
 ## Licence
 
